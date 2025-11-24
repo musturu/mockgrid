@@ -1,0 +1,23 @@
+# mockgrid configuration example
+# Save and pass with --config flag or via your command runner.
+
+smtp_server: "localhost"   # SMTP server hostname used to send emails (default: localhost)
+smtp_port: 587              # SMTP server port (default: 587)
+
+mockgrid_host: "0.0.0.0"  # Host to bind the mock SendGrid API on (default: 0.0.0.0)
+mockgrid_port: 5900         # Port to bind the mock SendGrid API on (default: 5900)
+
+templates:
+  # Mode controls where templates are loaded from:
+  #   - "local": load templates from a local directory
+  #   - "sendgrid": fetch templates from SendGrid using an API key
+  #   - "besteffort": try local directory first, fall back to SendGrid if not present
+  mode: "besteffort"
+  directory: "./templates"   # local templates directory (required if mode: local)
+  template_key: "SG.key"           # template key/id to look up in SendGrid when using sendgrid/besteffort, it needs AT LEAST permissions to read templates
+
+attachments:
+  dir: "./attachments"  # directory where temporary attachments will be written during processing
+
+auth:
+  sendgrid_key: ""  # SendGrid API key (used when mocking auth in sendgrid calls, it just checks that the Authorization header is set correctly)
