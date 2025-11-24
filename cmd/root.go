@@ -110,7 +110,7 @@ It supports SMTP for sending emails and can render templates similar to SendGrid
 		cmd.SetContext(ctx)
 
 		if merged.Attachments != nil && merged.Attachments.Dir != "" {
-			if err := os.MkdirAll(merged.Attachments.Dir, 0o777); err != nil {
+			if err := os.MkdirAll(merged.Attachments.Dir, 0o750); err != nil {
 				slog.Error("EmailServer.Start: failed to create attachment directory", "err", err)
 				return err
 			}

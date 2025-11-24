@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -39,7 +40,17 @@ func LoadEmailServiceConfig(path string) (*Config, error) {
 
 	var cfg Config
 
-	data, err := os.ReadFile(path)
+	cleanPath := filepath.Clean(path)
+	// ensure path exists and is a file
+	st, err := os.Stat(cleanPath)
+	if err != nil {
+		return nil, err
+	}
+	if st.IsDir() {
+		return nil, errors.New("config path is a directory")
+	}
+
+	data, err := os.ReadFile(cleanPath)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +70,7 @@ func (cfg *Config) WithDefaults() {
 	if cfg.LocalSendgridPort == 0 {
 		cfg.LocalSendgridPort = 5900
 	}
-	if cfg.Attachments != nil && cfg.Attachments.Dir != "" {
+	if cfg.Attachments != nil && cfg.Attachments.Dir == "" {
 		cfg.Attachments.Dir = "./attachments"
 	}
 	if cfg.SMTPServer == "" {

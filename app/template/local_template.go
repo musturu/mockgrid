@@ -3,7 +3,10 @@ package template
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 type LocalTemplate struct {
@@ -17,8 +20,40 @@ func NewLocalTemplate(templateDir string) *LocalTemplate {
 }
 
 func (lt LocalTemplate) GetTemplate(templateID string) (*TemplateVersion, error) {
-	filePath := fmt.Sprintf("%s/%s.html", lt.templateDir, templateID)
-	data, err := os.ReadFile(filePath)
+	// sanitize templateID to prevent directory traversal and ensure it resolves
+	// under the configured templateDir
+	safeID := filepath.Clean("/" + templateID) // prefix slash to force relative cleaning
+	// ensure file has .html suffix
+	if !strings.HasSuffix(safeID, ".html") {
+		safeID = safeID + ".html"
+	}
+	filePath := filepath.Join(lt.templateDir, safeID)
+
+	// ensure the resulting path is inside templateDir
+	absDir, err := filepath.Abs(lt.templateDir)
+	if err != nil {
+		return nil, err
+	}
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		return nil, err
+	}
+	rel, err := filepath.Rel(absDir, absPath)
+	if err != nil {
+		return nil, err
+	}
+	if strings.HasPrefix(rel, "..") {
+		return nil, fmt.Errorf("invalid template id: %s", templateID)
+	}
+
+	// read the file via an os.DirFS rooted at absDir to avoid direct file path access
+	dirFS := os.DirFS(absDir)
+	f, err := dirFS.Open(rel)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	data, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}

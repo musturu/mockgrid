@@ -49,7 +49,7 @@ type PostRequest struct {
 	TemplateID string `json:"template_id"`
 }
 
-// Validate validates the PostRequest and sends mail if valid.
+// Validate validates the PostRequest fields and returns appropriate error responses.
 func (p *PostRequest) Validate() (int, ErrorResponse) {
 	validate := validator.New()
 	if err := validate.Struct(p); err != nil {

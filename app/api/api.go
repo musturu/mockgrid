@@ -2,8 +2,10 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/mustur/mockgrid/app/api/objects"
 	"github.com/mustur/mockgrid/app/api/router"
@@ -34,12 +36,25 @@ func (m *MockGrid) Start() error {
 	if m.SMTPServerURL == "" {
 		return errors.New("SMTP server is not configured, email server will not start")
 	}
-	if err := http.ListenAndServe(m.listenAddr, m.mux); err != nil {
-		return errors.New("failed to start email server")
+	srv := &http.Server{
+		Addr:         m.listenAddr,
+		Handler:      m.mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 20 * time.Second,
+		IdleTimeout:  120 * time.Second,
 	}
-	slog.Info("Mockgrid server started against SMTP server", "server", m.SMTPServerURL)
-	slog.Info("Mockgrid server is listening", "address", m.listenAddr)
 
+	slog.Info("Starting Mockgrid HTTP server", "address", m.listenAddr)
+	if err := srv.ListenAndServe(); err != nil {
+		if err == http.ErrServerClosed {
+			// graceful shutdown occurred
+			slog.Info("Mockgrid server shutdown")
+			return nil
+		}
+		return fmt.Errorf("failed to start email server: %w", err)
+	}
+
+	slog.Info("Mockgrid server started against SMTP server", "server", m.SMTPServerURL)
 	return nil
 }
 

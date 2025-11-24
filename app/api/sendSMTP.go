@@ -119,13 +119,16 @@ func (m *MockGrid) createAttachment(fileName string, base64Content string) strin
 		return ""
 	}
 
+	// sanitize filename to prevent directory traversal
+	safeName := filepath.Base(fileName)
+
 	dirName := filepath.Join(m.attachmentDir, "attachment_"+strconv.FormatInt(time.Now().UnixNano(), 10))
-	if err := os.MkdirAll(dirName, 0o777); err != nil {
+	if err := os.MkdirAll(dirName, 0o750); err != nil {
 		slog.Error("Failed to create attachment directory", "dir", dirName, "err", err)
 		return ""
 	}
-	filePath := filepath.Join(dirName, fileName)
-	if err := os.WriteFile(filePath, data, 0o666); err != nil {
+	filePath := filepath.Join(dirName, safeName)
+	if err := os.WriteFile(filePath, data, 0o600); err != nil {
 		slog.Error("Failed to write attachment file", "file", filePath, "err", err)
 		return ""
 	}
