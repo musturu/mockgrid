@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/mustur/mockgrid/app/api/objects"
-	"github.com/mustur/mockgrid/app/api/router"
 	"github.com/mustur/mockgrid/app/template"
 )
 
 type MockGrid struct {
+	Services          []Service
 	tpl               template.Templater
 	mux               *http.ServeMux
 	enableAttachments bool
@@ -24,14 +24,24 @@ type MockGrid struct {
 	auth              *Auth
 }
 
+type Service interface {
+	GetMux() *http.ServeMux
+	GetRoot() string
+	Chain() Middleware
+}
+
 type Auth struct {
 	SendgridKey string
 }
 
 // Start initializes or starts the email server.
 func (m *MockGrid) Start() error {
-	// wire in-package handler
-	m.mux = router.NewMux(http.HandlerFunc(m.SendEmailHandler))
+
+	rout := http.NewServeMux()
+
+	for _, s := range m.Services {
+		rout.Handle(s.GetRoot(), http.StripPrefix(s.GetRoot(), s.Chain()(s.GetMux())))
+	}
 
 	if m.SMTPServerURL == "" {
 		return errors.New("SMTP server is not configured, email server will not start")

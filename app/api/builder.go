@@ -22,6 +22,7 @@ type MockGridBuilder struct {
 func NewBuilder() *MockGridBuilder { return &MockGridBuilder{} }
 
 func (b *MockGridBuilder) WithTemplate(t template.Templater) *MockGridBuilder { b.tpl = t; return b }
+
 func (b *MockGridBuilder) WithSMTP(server string, port int) *MockGridBuilder {
 	b.smtpServer = server
 	b.smtpPort = port
