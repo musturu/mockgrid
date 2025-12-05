@@ -20,6 +20,7 @@ type Config struct {
 	Templates         *TemplateConfig   `yaml:"templates"`
 	Attachments       *AttachmentConfig `yaml:"attachments"`
 	Auth              *Auth             `yaml:"auth"`
+	Storage           *StorageConfig    `yaml:"storage"`
 }
 
 type TemplateConfig struct {
@@ -30,10 +31,18 @@ type TemplateConfig struct {
 
 type Auth struct {
 	SendgridKey string `yaml:"sendgrid_key"`
+	SMTPUser    string `yaml:"smtp_user"`
+	SMTPPass    string `yaml:"smtp_pass"`
 }
 
 type AttachmentConfig struct {
 	Dir string `yaml:"dir"`
+}
+
+// StorageConfig holds configuration for message persistence.
+type StorageConfig struct {
+	Type string `yaml:"type"` // "none", "sqlite", "filesystem"
+	Path string `yaml:"path"` // path to sqlite db or filesystem directory
 }
 
 func LoadEmailServiceConfig(path string) (*Config, error) {
@@ -79,7 +88,9 @@ func (cfg *Config) WithDefaults() {
 	if cfg.SMTPPort == 0 {
 		cfg.SMTPPort = 587
 	}
-
+	if cfg.Storage == nil {
+		cfg.Storage = &StorageConfig{Type: "none"}
+	}
 }
 
 func (c *Config) ValidateConfig() error {
@@ -179,6 +190,14 @@ func (c *Config) PrintValues() {
 	// auth
 	if c.Auth != nil {
 		pterm.Info.Println("Auth Sendgrid Key:", maskSecret(c.Auth.SendgridKey))
+		pterm.Info.Println("Auth SMTP User:", c.Auth.SMTPUser)
+		pterm.Info.Println("Auth SMTP Pass:", maskSecret(c.Auth.SMTPPass))
+	}
+
+	// storage
+	if c.Storage != nil {
+		pterm.Info.Println("Storage Type:", c.Storage.Type)
+		pterm.Info.Println("Storage Path:", c.Storage.Path)
 	}
 }
 
@@ -242,8 +261,37 @@ func LoadFromEnv() *Config {
 	}
 
 	// Auth
+	var auth Auth
+	anyAuth := false
 	if v := os.Getenv("SENDGRID_KEY"); v != "" {
-		cfg.Auth = &Auth{SendgridKey: v}
+		auth.SendgridKey = v
+		anyAuth = true
+	}
+	if v := os.Getenv("SMTP_USER"); v != "" {
+		auth.SMTPUser = v
+		anyAuth = true
+	}
+	if v := os.Getenv("SMTP_PASS"); v != "" {
+		auth.SMTPPass = v
+		anyAuth = true
+	}
+	if anyAuth {
+		cfg.Auth = &auth
+	}
+
+	// Storage
+	var storage StorageConfig
+	anyStorage := false
+	if v := os.Getenv("STORAGE_TYPE"); v != "" {
+		storage.Type = v
+		anyStorage = true
+	}
+	if v := os.Getenv("STORAGE_PATH"); v != "" {
+		storage.Path = v
+		anyStorage = true
+	}
+	if anyStorage {
+		cfg.Storage = &storage
 	}
 
 	return cfg
@@ -300,11 +348,32 @@ func MergeConfig(base *Config, over *Config) *Config {
 	}
 
 	// Auth
-	if over.Auth != nil && over.Auth.SendgridKey != "" {
+	if over.Auth != nil {
 		if base.Auth == nil {
 			base.Auth = &Auth{}
 		}
-		base.Auth.SendgridKey = over.Auth.SendgridKey
+		if over.Auth.SendgridKey != "" {
+			base.Auth.SendgridKey = over.Auth.SendgridKey
+		}
+		if over.Auth.SMTPUser != "" {
+			base.Auth.SMTPUser = over.Auth.SMTPUser
+		}
+		if over.Auth.SMTPPass != "" {
+			base.Auth.SMTPPass = over.Auth.SMTPPass
+		}
+	}
+
+	// Storage
+	if over.Storage != nil {
+		if base.Storage == nil {
+			base.Storage = &StorageConfig{}
+		}
+		if over.Storage.Type != "" {
+			base.Storage.Type = over.Storage.Type
+		}
+		if over.Storage.Path != "" {
+			base.Storage.Path = over.Storage.Path
+		}
 	}
 
 	return base

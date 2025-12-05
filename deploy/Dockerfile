@@ -6,19 +6,20 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-# Install CA certs so we can copy the system bundle into the final scratch image.
-# Keep this small and clean up apt lists to reduce image size.
+# Install CA certs and build dependencies for CGO (SQLite support)
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends ca-certificates gcc libc6-dev \
+	&& rm -rf /var/lib/apt/lists/*
+# Build with CGO enabled for SQLite support
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags='-s -w' -o /mockgrid ./
+
+# Runtime stage - use minimal image with libc for CGO binary
+FROM debian:bookworm-slim
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends ca-certificates \
-	&& rm -rf /var/lib/apt/lists/*
-# Build a statically linked binary for linux/amd64
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-s -w' -o /mockgrid ./
-
-FROM scratch
-USER 10001
+	&& rm -rf /var/lib/apt/lists/* \
+	&& useradd -u 10001 -m appuser
+USER appuser
 COPY --from=builder /mockgrid /mockgrid
-# copy CA certificates from the builder so TLS validation works in the final image
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
-
-ENTRYPOINT ["/mockgrid serve"]
+ENTRYPOINT ["/mockgrid", "serve"]

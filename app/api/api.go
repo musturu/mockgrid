@@ -7,70 +7,70 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mustur/mockgrid/app/api/objects"
-	"github.com/mustur/mockgrid/app/template"
+	"github.com/mustur/mockgrid/app/api/middleware"
 )
 
-type MockGrid struct {
-	Services          []Service
-	tpl               template.Templater
-	mux               *http.ServeMux
-	enableAttachments bool
-	smtpServer        string
-	smtpPort          int
-	SMTPServerURL     string
-	listenAddr        string
-	attachmentDir     string
-	auth              *Auth
-}
-
+// Service defines the interface that all services must implement.
 type Service interface {
 	GetMux() *http.ServeMux
 	GetRoot() string
-	Chain() Middleware
+	Chain() middleware.Middleware
 }
 
-type Auth struct {
-	SendgridKey string
+// MockGrid is the main application server.
+type MockGrid struct {
+	services   []Service
+	listenAddr string
 }
 
-// Start initializes or starts the email server.
+// New creates a new MockGrid instance with the given services.
+func New(listenAddr string, services ...Service) *MockGrid {
+	return &MockGrid{
+		listenAddr: listenAddr,
+		services:   services,
+	}
+}
+
+// Start initializes and starts the HTTP server.
 func (m *MockGrid) Start() error {
-
-	rout := http.NewServeMux()
-
-	for _, s := range m.Services {
-		rout.Handle(s.GetRoot(), http.StripPrefix(s.GetRoot(), s.Chain()(s.GetMux())))
+	if len(m.services) == 0 {
+		return errors.New("no services registered")
 	}
 
-	if m.SMTPServerURL == "" {
-		return errors.New("SMTP server is not configured, email server will not start")
+	mux := http.NewServeMux()
+
+	for _, svc := range m.services {
+		root := svc.GetRoot()
+		handler := svc.Chain()(svc.GetMux())
+		mux.Handle(root, http.StripPrefix(root, handler))
+		slog.Info("registered service", "root", root)
 	}
+
+	// health and root endpoints
+	mux.HandleFunc("GET /health", handleHealth)
+
 	srv := &http.Server{
 		Addr:         m.listenAddr,
-		Handler:      m.mux,
+		Handler:      mux,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 20 * time.Second,
 		IdleTimeout:  120 * time.Second,
 	}
 
-	slog.Info("Starting Mockgrid HTTP server", "address", m.listenAddr)
+	slog.Info("starting mockgrid HTTP server", "address", m.listenAddr)
 	if err := srv.ListenAndServe(); err != nil {
 		if err == http.ErrServerClosed {
-			// graceful shutdown occurred
-			slog.Info("Mockgrid server shutdown")
+			slog.Info("mockgrid server shutdown")
 			return nil
 		}
-		return fmt.Errorf("failed to start email server: %w", err)
+		return fmt.Errorf("failed to start server: %w", err)
 	}
-
-	slog.Info("Mockgrid server started against SMTP server", "server", m.SMTPServerURL)
 	return nil
 }
 
-func (m *MockGrid) RenderAndPopulateFromTemplate(pr *objects.PostRequest) error {
-	if m.tpl != nil {
-		return template.RenderAndPopulateFromTemplate(pr, m.tpl)
-	}
-	return nil
+// handleHealth returns a simple health check response.
+func handleHealth(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"healthy"}`))
 }

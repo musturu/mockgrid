@@ -93,8 +93,37 @@ It supports SMTP for sending emails and can render templates similar to SendGrid
 		}
 
 		// auth
+		auth := &config.Auth{}
+		anyAuth := false
 		if v, _ := cmd.Flags().GetString("sendgrid-key"); v != "" {
-			flagCfg.Auth = &config.Auth{SendgridKey: v}
+			auth.SendgridKey = v
+			anyAuth = true
+		}
+		if v, _ := cmd.Flags().GetString("smtp-user"); v != "" {
+			auth.SMTPUser = v
+			anyAuth = true
+		}
+		if v, _ := cmd.Flags().GetString("smtp-pass"); v != "" {
+			auth.SMTPPass = v
+			anyAuth = true
+		}
+		if anyAuth {
+			flagCfg.Auth = auth
+		}
+
+		// storage
+		storage := &config.StorageConfig{}
+		anyStorage := false
+		if v, _ := cmd.Flags().GetString("storage-type"); v != "" {
+			storage.Type = v
+			anyStorage = true
+		}
+		if v, _ := cmd.Flags().GetString("storage-path"); v != "" {
+			storage.Path = v
+			anyStorage = true
+		}
+		if anyStorage {
+			flagCfg.Storage = storage
 		}
 
 		// Merge order: envCfg <- fileCfg <- flagCfg
@@ -151,5 +180,9 @@ func init() {
 	rootCmd.PersistentFlags().String("templates-key", "", "Templates key for remote provider")
 	rootCmd.PersistentFlags().String("attachments-dir", "", "Directory to store attachments")
 	rootCmd.PersistentFlags().String("sendgrid-key", "", "Sendgrid API key")
+	rootCmd.PersistentFlags().String("smtp-user", "", "SMTP authentication username")
+	rootCmd.PersistentFlags().String("smtp-pass", "", "SMTP authentication password")
+	rootCmd.PersistentFlags().String("storage-type", "", "Storage type: none|sqlite|filesystem")
+	rootCmd.PersistentFlags().String("storage-path", "", "Storage path for sqlite or filesystem")
 	rootCmd.AddCommand(serveCmd)
 }
