@@ -5,6 +5,7 @@ go 1.25
 require (
 	github.com/aymerick/raymond v2.0.2+incompatible
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
+	github.com/mattn/go-sqlite3 v1.14.32
 	gopkg.in/go-playground/validator.v9 v9.31.0
 	sigs.k8s.io/yaml v1.6.0
 )

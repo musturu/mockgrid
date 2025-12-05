@@ -61,11 +61,11 @@ It supports SMTP for sending emails and can render templates similar to SendGrid
 		if v, _ := cmd.Flags().GetInt("smtp-port"); v != 0 {
 			flagCfg.SMTPPort = v
 		}
-		if v, _ := cmd.Flags().GetString("local-sendgrid-host"); v != "" {
-			flagCfg.LocalSendGridHost = v
+		if v, _ := cmd.Flags().GetString("mockgrid-host"); v != "" {
+			flagCfg.MockgridHost = v
 		}
-		if v, _ := cmd.Flags().GetInt("local-sendgrid-port"); v != 0 {
-			flagCfg.LocalSendgridPort = v
+		if v, _ := cmd.Flags().GetInt("mockgrid-port"); v != 0 {
+			flagCfg.MockgridPort = v
 		}
 
 		// templates
@@ -173,8 +173,8 @@ func init() {
 	// config override flags
 	rootCmd.PersistentFlags().String("smtp-server", "", "SMTP server hostname")
 	rootCmd.PersistentFlags().Int("smtp-port", 0, "SMTP server port")
-	rootCmd.PersistentFlags().String("local-sendgrid-host", "", "Local SendGrid host")
-	rootCmd.PersistentFlags().Int("local-sendgrid-port", 0, "Local SendGrid port")
+	rootCmd.PersistentFlags().String("mockgrid-host", "", "Mockgrid host to bind on")
+	rootCmd.PersistentFlags().Int("mockgrid-port", 0, "Mockgrid port to bind on")
 	rootCmd.PersistentFlags().String("templates-mode", "", "Templates mode: local|sendgrid|besteffort")
 	rootCmd.PersistentFlags().String("templates-directory", "", "Local templates directory")
 	rootCmd.PersistentFlags().String("templates-key", "", "Templates key for remote provider")

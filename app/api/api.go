@@ -42,7 +42,13 @@ func (m *MockGrid) Start() error {
 	for _, svc := range m.services {
 		root := svc.GetRoot()
 		handler := svc.Chain()(svc.GetMux())
-		mux.Handle(root, http.StripPrefix(root, handler))
+		// StripPrefix needs the path without trailing slash to avoid redirect issues
+		// e.g., /api/ -> strip /api so /api/test becomes /test (not redirect to /test)
+		stripPath := root
+		if len(stripPath) > 1 && stripPath[len(stripPath)-1] == '/' {
+			stripPath = stripPath[:len(stripPath)-1]
+		}
+		mux.Handle(root, http.StripPrefix(stripPath, handler))
 		slog.Info("registered service", "root", root)
 	}
 

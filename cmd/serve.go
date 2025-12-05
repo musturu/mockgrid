@@ -42,7 +42,7 @@ var serveCmd = &cobra.Command{
 		}()
 
 		tpl := buildTemplater(cfg)
-		listenAddr := fmt.Sprintf("%s:%d", cfg.LocalSendGridHost, cfg.LocalSendgridPort)
+		listenAddr := fmt.Sprintf("%s:%d", cfg.MockgridHost, cfg.MockgridPort)
 
 		// Build services
 		mailSvc := sendmail.New(sendmail.Config{

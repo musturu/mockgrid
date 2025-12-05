@@ -13,20 +13,20 @@ import (
 
 // Config holds all configuration values for the EmailServer.
 type Config struct {
-	SMTPServer        string            `yaml:"smtp_server"`
-	SMTPPort          int               `yaml:"smtp_port"`
-	LocalSendGridHost string            `yaml:"local_sendgrid_host"`
-	LocalSendgridPort int               `yaml:"local_sendgrid_port"`
-	Templates         *TemplateConfig   `yaml:"templates"`
-	Attachments       *AttachmentConfig `yaml:"attachments"`
-	Auth              *Auth             `yaml:"auth"`
-	Storage           *StorageConfig    `yaml:"storage"`
+	SMTPServer   string            `yaml:"smtp_server"`
+	SMTPPort     int               `yaml:"smtp_port"`
+	MockgridHost string            `yaml:"mockgrid_host"`
+	MockgridPort int               `yaml:"mockgrid_port"`
+	Templates    *TemplateConfig   `yaml:"templates"`
+	Attachments  *AttachmentConfig `yaml:"attachments"`
+	Auth         *Auth             `yaml:"auth"`
+	Storage      *StorageConfig    `yaml:"storage"`
 }
 
 type TemplateConfig struct {
-	Mode        string // "local", "sendgrid", "besteffort"
-	Directory   string
-	TemplateKey string
+	Mode        string `yaml:"mode"`         // "local", "sendgrid", "besteffort"
+	Directory   string `yaml:"directory"`    // local templates directory
+	TemplateKey string `yaml:"template_key"` // SendGrid API key for template fetching
 }
 
 type Auth struct {
@@ -73,11 +73,11 @@ func LoadEmailServiceConfig(path string) (*Config, error) {
 
 func (cfg *Config) WithDefaults() {
 
-	if cfg.LocalSendGridHost == "" {
-		cfg.LocalSendGridHost = "0.0.0.0"
+	if cfg.MockgridHost == "" {
+		cfg.MockgridHost = "0.0.0.0"
 	}
-	if cfg.LocalSendgridPort == 0 {
-		cfg.LocalSendgridPort = 5900
+	if cfg.MockgridPort == 0 {
+		cfg.MockgridPort = 5900
 	}
 	if cfg.Attachments != nil && cfg.Attachments.Dir == "" {
 		cfg.Attachments.Dir = "./attachments"
@@ -172,8 +172,8 @@ func (c *Config) PrintValues() {
 	// top-level scalar values
 	pterm.Info.Println("SMTP Server:", c.SMTPServer)
 	pterm.Info.Println("SMTP Port:", strconv.Itoa(c.SMTPPort))
-	pterm.Info.Println("Local SendGrid Host:", c.LocalSendGridHost)
-	pterm.Info.Println("Local SendGrid Port:", strconv.Itoa(c.LocalSendgridPort))
+	pterm.Info.Println("Mockgrid Host:", c.MockgridHost)
+	pterm.Info.Println("Mockgrid Port:", strconv.Itoa(c.MockgridPort))
 
 	// templates
 	if c.Templates != nil {
@@ -228,11 +228,11 @@ func LoadFromEnv() *Config {
 		}
 	}
 	if v := os.Getenv("MOCKGRID_HOST"); v != "" {
-		cfg.LocalSendGridHost = v
+		cfg.MockgridHost = v
 	}
 	if v := os.Getenv("MOCKGRID_PORT"); v != "" {
 		if i, err := strconv.Atoi(v); err == nil {
-			cfg.LocalSendgridPort = i
+			cfg.MockgridPort = i
 		}
 	}
 
@@ -316,11 +316,11 @@ func MergeConfig(base *Config, over *Config) *Config {
 	if over.SMTPPort != 0 {
 		base.SMTPPort = over.SMTPPort
 	}
-	if over.LocalSendGridHost != "" {
-		base.LocalSendGridHost = over.LocalSendGridHost
+	if over.MockgridHost != "" {
+		base.MockgridHost = over.MockgridHost
 	}
-	if over.LocalSendgridPort != 0 {
-		base.LocalSendgridPort = over.LocalSendgridPort
+	if over.MockgridPort != 0 {
+		base.MockgridPort = over.MockgridPort
 	}
 
 	// Templates
