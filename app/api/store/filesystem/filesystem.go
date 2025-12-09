@@ -4,6 +4,7 @@ package filesystem
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,9 +58,9 @@ func (s *Store) Close() error {
 }
 
 func (s *Store) getByID(id string) ([]*store.Message, error) {
+	// Use fs.ReadFile from io/fs package
 	filename := s.filename(id)
-
-	data, err := os.ReadFile(filename)
+	data, err := fs.ReadFile(os.DirFS(s.dir), filename)
 	if os.IsNotExist(err) {
 		return nil, store.ErrNotFound
 	}
@@ -118,7 +119,11 @@ func (s *Store) list(query store.GetQuery) ([]*store.Message, error) {
 }
 
 func (s *Store) readMessageFile(name string) (*store.Message, error) {
-	data, err := os.ReadFile(filepath.Join(s.dir, name))
+	// Use os.DirFS to scope file access under the root directory
+	fs := os.DirFS(s.dir)
+
+	// Correct usage of fs.ReadFile function
+	data, err := fs.ReadFile(os.DirFS(s.dir), filepath.Base(name))
 	if err != nil {
 		return nil, err
 	}
