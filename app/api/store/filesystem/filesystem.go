@@ -119,11 +119,9 @@ func (s *Store) list(query store.GetQuery) ([]*store.Message, error) {
 }
 
 func (s *Store) readMessageFile(name string) (*store.Message, error) {
-	// Use os.DirFS to scope file access under the root directory
-	fs := os.DirFS(s.dir)
+	fsys := os.DirFS(s.dir)
 
-	// Correct usage of fs.ReadFile function
-	data, err := fs.ReadFile(os.DirFS(s.dir), filepath.Base(name))
+	data, err := fs.ReadFile(fsys, filepath.Base(name))
 	if err != nil {
 		return nil, err
 	}

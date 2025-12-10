@@ -15,13 +15,13 @@ type Store struct {
 }
 
 // New creates a new SQLite store at the given path.
-func New(dbPath string) (*Store, err error) {
+func New(dbPath string) (s *Store, err error) {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
 
-	s := &Store{db: db}
+	s = &Store{db: db}
 	// Ensure db.Close() is deferred in case of an error
 	defer func() {
 		if err != nil {
