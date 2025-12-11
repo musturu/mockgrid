@@ -1,24 +1,25 @@
 # Multi-stage Dockerfile for mockgrid
 
-# Build stage
-FROM golang:1.25.3 AS builder
+# Build stage on Alpine so we can reuse musl-linked artifacts
+FROM golang:1.25.5-alpine3.21 AS builder
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-# Install CA certs so we can copy the system bundle into the final scratch image.
-# Keep this small and clean up apt lists to reduce image size.
-RUN apt-get update \
-	&& apt-get install -y --no-install-recommends ca-certificates \
-	&& rm -rf /var/lib/apt/lists/*
-# Build a statically linked binary for linux/amd64
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-s -w' -o /mockgrid ./
+# Install CA certs and build dependencies for CGO (SQLite support)
+RUN apk add --no-cache ca-certificates build-base sqlite-dev sqlite
+# Build with CGO enabled for SQLite support
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags='-s -w' -o /mockgrid ./
 
-FROM scratch
-USER 10001
+# Runtime stage uses lightweight Alpine with busybox/sh
+FROM alpine:3.21 AS runtime
+RUN apk add --no-cache ca-certificates
 COPY --from=builder /mockgrid /mockgrid
-# copy CA certificates from the builder so TLS validation works in the final image
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=builder /usr/bin/sqlite3 /usr/bin/sqlite3
+RUN adduser -D -u 10001 appuser
+COPY scripts/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+USER appuser
 
-
-ENTRYPOINT ["/mockgrid serve"]
+ENTRYPOINT ["/bin/sh", "/docker-entrypoint.sh"]
+CMD ["serve"]

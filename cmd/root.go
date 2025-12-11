@@ -61,11 +61,11 @@ It supports SMTP for sending emails and can render templates similar to SendGrid
 		if v, _ := cmd.Flags().GetInt("smtp-port"); v != 0 {
 			flagCfg.SMTPPort = v
 		}
-		if v, _ := cmd.Flags().GetString("local-sendgrid-host"); v != "" {
-			flagCfg.LocalSendGridHost = v
+		if v, _ := cmd.Flags().GetString("mockgrid-host"); v != "" {
+			flagCfg.MockgridHost = v
 		}
-		if v, _ := cmd.Flags().GetInt("local-sendgrid-port"); v != 0 {
-			flagCfg.LocalSendgridPort = v
+		if v, _ := cmd.Flags().GetInt("mockgrid-port"); v != 0 {
+			flagCfg.MockgridPort = v
 		}
 
 		// templates
@@ -93,8 +93,37 @@ It supports SMTP for sending emails and can render templates similar to SendGrid
 		}
 
 		// auth
+		auth := &config.Auth{}
+		anyAuth := false
 		if v, _ := cmd.Flags().GetString("sendgrid-key"); v != "" {
-			flagCfg.Auth = &config.Auth{SendgridKey: v}
+			auth.SendgridKey = v
+			anyAuth = true
+		}
+		if v, _ := cmd.Flags().GetString("smtp-user"); v != "" {
+			auth.SMTPUser = v
+			anyAuth = true
+		}
+		if v, _ := cmd.Flags().GetString("smtp-pass"); v != "" {
+			auth.SMTPPass = v
+			anyAuth = true
+		}
+		if anyAuth {
+			flagCfg.Auth = auth
+		}
+
+		// storage
+		storage := &config.StorageConfig{}
+		anyStorage := false
+		if v, _ := cmd.Flags().GetString("storage-type"); v != "" {
+			storage.Type = v
+			anyStorage = true
+		}
+		if v, _ := cmd.Flags().GetString("storage-path"); v != "" {
+			storage.Path = v
+			anyStorage = true
+		}
+		if anyStorage {
+			flagCfg.Storage = storage
 		}
 
 		// Merge order: envCfg <- fileCfg <- flagCfg
@@ -144,12 +173,16 @@ func init() {
 	// config override flags
 	rootCmd.PersistentFlags().String("smtp-server", "", "SMTP server hostname")
 	rootCmd.PersistentFlags().Int("smtp-port", 0, "SMTP server port")
-	rootCmd.PersistentFlags().String("local-sendgrid-host", "", "Local SendGrid host")
-	rootCmd.PersistentFlags().Int("local-sendgrid-port", 0, "Local SendGrid port")
+	rootCmd.PersistentFlags().String("mockgrid-host", "", "Mockgrid host to bind on")
+	rootCmd.PersistentFlags().Int("mockgrid-port", 0, "Mockgrid port to bind on")
 	rootCmd.PersistentFlags().String("templates-mode", "", "Templates mode: local|sendgrid|besteffort")
 	rootCmd.PersistentFlags().String("templates-directory", "", "Local templates directory")
 	rootCmd.PersistentFlags().String("templates-key", "", "Templates key for remote provider")
 	rootCmd.PersistentFlags().String("attachments-dir", "", "Directory to store attachments")
 	rootCmd.PersistentFlags().String("sendgrid-key", "", "Sendgrid API key")
+	rootCmd.PersistentFlags().String("smtp-user", "", "SMTP authentication username")
+	rootCmd.PersistentFlags().String("smtp-pass", "", "SMTP authentication password")
+	rootCmd.PersistentFlags().String("storage-type", "", "Storage type: none|sqlite|filesystem")
+	rootCmd.PersistentFlags().String("storage-path", "", "Storage path for sqlite or filesystem")
 	rootCmd.AddCommand(serveCmd)
 }

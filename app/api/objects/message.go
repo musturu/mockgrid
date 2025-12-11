@@ -34,8 +34,8 @@ iso 8601 format
 */
 // Message represents a SendGrid-style message object.
 type Message struct {
-	From          string `json:"from_email" validate:"required"`
 	MsgID         string `json:"msg_id,omitempty"`
+	From          string `json:"from_email" validate:"required"`
 	Subject       string `json:"subject,omitempty"`
 	To            string `json:"to_email,omitempty"`
 	Status        string `json:"status,omitempty"`

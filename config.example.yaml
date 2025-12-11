@@ -9,10 +9,10 @@ mockgrid_port: 5900         # Port to bind the mock SendGrid API on (default: 59
 
 templates:
   # Mode controls where templates are loaded from:
-  #   - "local": load templates from a local directory
+  #   - "local": load templates from a local directory (requires directory to exist)
   #   - "sendgrid": fetch templates from SendGrid using an API key
   #   - "besteffort": try local directory first, fall back to SendGrid if not present
-  mode: "besteffort"
+  mode: "local"
   directory: "./templates"   # local templates directory (required if mode: local)
   template_key: "SG.key"           # template key/id to look up in SendGrid when using sendgrid/besteffort, it needs AT LEAST permissions to read templates
 
@@ -21,3 +21,9 @@ attachments:
 
 auth:
   sendgrid_key: ""  # SendGrid API key (used when mocking auth in sendgrid calls, it just checks that the Authorization header is set correctly)
+  smtp_user: ""      # SMTP authentication username (optional, leave empty for no auth)
+  smtp_pass: ""      # SMTP authentication password (optional, leave empty for no auth)
+
+storage:
+  type: "filesystem"                    # Storage type: "none", "sqlite", "filesystem"
+  path: "./data/messages.db"      # Path for sqlite db or filesystem directory

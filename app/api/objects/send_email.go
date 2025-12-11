@@ -7,46 +7,46 @@ import (
 	"gopkg.in/go-playground/validator.v9"
 )
 
+// EmailAddress represents an email address with optional name.
+type EmailAddress struct {
+	Email string `json:"email"`
+	Name  string `json:"name"`
+}
+
+// Personalization represents a single personalization block in a SendGrid request.
+type Personalization struct {
+	DynamicTemplateData map[string]interface{} `json:"dynamic_template_data"`
+	To                  []EmailAddress         `json:"to"`
+	Cc                  []EmailAddress         `json:"cc"`
+	Bcc                 []EmailAddress         `json:"bcc"`
+	Substitutions       map[string]string      `json:"substitutions"`
+	Subject             string                 `json:"subject"`
+}
+
+// Content represents an email content block.
+type Content struct {
+	Type  string `json:"type"`
+	Value string `json:"value"`
+}
+
+// Attachment represents an email attachment.
+type Attachment struct {
+	Content     string `json:"content"`
+	Type        string `json:"type"`
+	Filename    string `json:"filename"`
+	Disposition string `json:"disposition"`
+	ContentId   string `json:"content_id"`
+}
+
 // PostRequest represents the structure of the email request body in SendGrid format.
 type PostRequest struct {
-	Personalizations []struct {
-		DynamicTemplateData map[string]interface{} `json:"dynamic_template_data"`
-		To                  []struct {
-			Email string `json:"email"`
-			Name  string `json:"name"`
-		} `json:"to"`
-		Cc []struct {
-			Email string `json:"email"`
-			Name  string `json:"name"`
-		} `json:"cc"`
-		Bcc []struct {
-			Email string `json:"email"`
-			Name  string `json:"name"`
-		} `json:"bcc"`
-		Substitutions map[string]string `json:"substitutions"`
-		Subject       string            `json:"subject"`
-	} `json:"personalizations" validate:"required"`
-	From struct {
-		Email string `json:"email" validate:"required"`
-		Name  string `json:"name"`
-	} `json:"from"`
-	ReplyTo struct {
-		Email string `json:"email"`
-		Name  string `json:"name"`
-	} `json:"reply_to"`
-	Subject string `json:"subject"`
-	Content []struct {
-		Type  string `json:"type"`
-		Value string `json:"value"`
-	} `json:"content"`
-	Attachments []struct {
-		Content     string `json:"content"`
-		Type        string `json:"type"`
-		Filename    string `json:"filename"`
-		Disposition string `json:"disposition"`
-		ContentId   string `json:"content_id"`
-	} `json:"attachments"`
-	TemplateID string `json:"template_id"`
+	Personalizations []Personalization `json:"personalizations" validate:"required"`
+	From             EmailAddress      `json:"from" validate:"required"`
+	ReplyTo          EmailAddress      `json:"reply_to"`
+	Subject          string            `json:"subject"`
+	Content          []Content         `json:"content"`
+	Attachments      []Attachment      `json:"attachments"`
+	TemplateID       string            `json:"template_id"`
 }
 
 // Validate validates the PostRequest fields and returns appropriate error responses.
