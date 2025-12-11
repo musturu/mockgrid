@@ -16,10 +16,13 @@ RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags='-s -w' -o /mockgrid
 # Runtime stage - use minimal image with libc for CGO binary
 FROM debian:bookworm-slim
 RUN apt-get update \
-	&& apt-get install -y --no-install-recommends ca-certificates \
+	&& apt-get install -y --no-install-recommends ca-certificates sqlite3 \
 	&& rm -rf /var/lib/apt/lists/* \
 	&& useradd -u 10001 -m appuser
+COPY scripts/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 USER appuser
 COPY --from=builder /mockgrid /mockgrid
 
-ENTRYPOINT ["/mockgrid", "serve"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["serve"]

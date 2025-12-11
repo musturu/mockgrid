@@ -69,6 +69,28 @@ docker run -p 8080:8080 \
 
 The Dockerfile in `deploy/` builds a minimal scratch image with only the compiled binary and CA certificates.
 
+### Docker database initialization
+
+The image runs `/docker-entrypoint-initdb.d/*` before it starts the HTTP server, making it easy to seed storage.
+
+- Drop shell scripts (`*.sh`) into the directory to run arbitrary commands inside the container before the service starts.
+- Drop SQL files (`*.sql`) to execute them against the configured SQLite database (requires `STORAGE_TYPE=sqlite`).
+- Drop JSON files (`*.json`) to copy them directly into a filesystem store (`STORAGE_TYPE=filesystem`). Existing files are left untouched.
+
+Set the storage environment variables to match the config that the server will load, and optionally point the entrypoint at a specific YAML file using `MOCKGRID_CONFIG`:
+
+```bash
+docker run --rm \
+  -v "$PWD/initdb":/docker-entrypoint-initdb.d \
+  -v "$PWD/config.yaml":/etc/mockgrid/config.yaml \
+  -e STORAGE_TYPE=sqlite \
+  -e STORAGE_PATH=/data/messages.db \
+  -e MOCKGRID_CONFIG=/etc/mockgrid/config.yaml \
+  mockgrid:latest serve
+```
+
+With this setup you can drop SQL that creates tables or INSERTs, shell scripts that prepare fixtures, and JSON payloads that represent existing messages without needing to rebuild the image. The entrypoint automatically creates the target directories and runs the scripts once before launching `mockgrid serve`.
+
 ## Configuration
 
 Configuration is loaded from three sources (in order of precedence):
