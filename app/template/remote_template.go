@@ -5,21 +5,31 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
 type SendGridTemplate struct {
 	sendgridKey string
 	sendgridURL string
+	client      *http.Client
 }
 
 func NewSendGridTemplate(sendgridKey string, sendgridURL string) *SendGridTemplate {
+	return newSendGridTemplate(sendgridKey, sendgridURL, nil)
+}
+
+func newSendGridTemplate(sendgridKey string, sendgridURL string, client *http.Client) *SendGridTemplate {
 	if sendgridURL == "" {
 		sendgridURL = "https://api.sendgrid.com/v3/templates/"
+	}
+	if client == nil {
+		client = &http.Client{Timeout: 10 * time.Second}
 	}
 
 	return &SendGridTemplate{
 		sendgridKey: sendgridKey,
 		sendgridURL: sendgridURL,
+		client:      client,
 	}
 }
 
@@ -32,7 +42,7 @@ func (sgt SendGridTemplate) GetTemplate(templateID string) (*TemplateVersion, er
 	req.Header.Set("Authorization", "Bearer "+sgt.sendgridKey)
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := sgt.client.Do(req)
 	if err != nil {
 		return nil, err
 	}

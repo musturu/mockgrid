@@ -16,19 +16,19 @@ type WebhookStore interface {
 	// Create stores a new webhook
 	Create(hook *WebhookConfig) error
 
-	// Get retrieves webhooks based on query parameters.
-	Get(id string) (*WebhookConfig, error)
+	// GetWebhook retrieves a webhook by ID
+	GetWebhook(id string) (*WebhookConfig, error)
 
-	List() ([]*WebhookConfig, error)
+	ListWebhooks() ([]*WebhookConfig, error)
 
-	// ListEnabled lists all enabled webhooks
-	ListEnabled() ([]*WebhookConfig, error)
+	// ListEnabledWebhooks lists all enabled webhooks
+	ListEnabledWebhooks() ([]*WebhookConfig, error)
 
-	// Update modifies a webhook
-	Update(hook *WebhookConfig) error
+	// UpdateWebhook modifies a webhook
+	UpdateWebhook(hook *WebhookConfig) error
 
-	// Delete removes a webhook
-	Delete(id string) error
+	// DeleteWebhook removes a webhook by ID
+	DeleteWebhook(id string) error
 
 	// Close releases resources
 	Close() error

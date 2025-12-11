@@ -23,6 +23,11 @@ func (s *Store) Close() error {
 	return nil
 }
 
+// Connect is a no-op for filesystem store.
+func (s *Store) Connect() error {
+	return nil
+}
+
 func (s *Store) filename(id string) string {
 	safeID := filepath.Base(id)
 	return filepath.Join(s.dir, safeID+".json")

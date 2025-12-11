@@ -54,7 +54,7 @@ func (d *Dispatcher) DispatchMessageEvent(msgID, email, from, subject string, st
 
 func (d *Dispatcher) dispatchAsync(msgID, email, from, subject string, status string, reason string) {
 	// Get all enabled webhooks
-	webhooks, err := d.webhookStore.ListEnabled()
+	webhooks, err := d.webhookStore.ListEnabledWebhooks()
 	if err != nil {
 		slog.Error("failed to list webhooks", "err", err)
 		return

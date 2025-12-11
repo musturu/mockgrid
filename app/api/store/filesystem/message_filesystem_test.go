@@ -41,7 +41,7 @@ func TestFilesystem_New_CreatesDirectory(t *testing.T) {
 
 	// Should be able to save
 	msg := &store.Message{MsgID: "test", FromEmail: "a@b.com", ToEmail: "b@c.com", Timestamp: 1}
-	if err := s.Save(msg); err != nil {
+	if err := s.SaveMSG(msg); err != nil {
 		t.Errorf("Save failed: %v", err)
 	}
 }
@@ -55,7 +55,7 @@ func TestFilesystem_Save_RequiresID(t *testing.T) {
 	defer s.Close()
 
 	msg := &store.Message{FromEmail: "a@b.com"} // no MsgID
-	if err := s.Save(msg); err == nil {
+	if err := s.SaveMSG(msg); err == nil {
 		t.Error("expected error for missing ID")
 	}
 }
@@ -70,7 +70,7 @@ func TestFilesystem_Save_SanitizesFilename(t *testing.T) {
 
 	// ID with path separators should be sanitized
 	msg := &store.Message{MsgID: "test/id", FromEmail: "a@b.com", ToEmail: "b@c.com", Timestamp: 1}
-	if err := s.Save(msg); err != nil {
+	if err := s.SaveMSG(msg); err != nil {
 		t.Errorf("Save failed: %v", err)
 	}
 }
@@ -83,7 +83,7 @@ func TestFilesystem_Get_NotFound_ReturnsError(t *testing.T) {
 	}
 	defer s.Close()
 
-	_, err = s.Get(store.GetQuery{ID: "nonexistent"})
+	_, err = s.GetMSG(store.GetQuery{ID: "nonexistent"})
 	if !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("expected ErrNotFound, got: %v", err)
 	}
@@ -125,7 +125,7 @@ func BenchmarkFilesystem_Save(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		msg.MsgID = "bench-" + string(rune('a'+i%26))
-		if err := s.Save(msg); err != nil {
+		if err := s.SaveMSG(msg); err != nil {
 			b.Fatalf("Save failed: %v", err)
 		}
 	}
@@ -148,13 +148,13 @@ func BenchmarkFilesystem_Get(b *testing.B) {
 		Status:    store.StatusProcessed,
 		Timestamp: 1700000000,
 	}
-	if err := s.Save(msg); err != nil {
+	if err := s.SaveMSG(msg); err != nil {
 		b.Fatalf("Save failed: %v", err)
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := s.Get(store.GetQuery{ID: "bench-get"}); err != nil {
+		if _, err := s.GetMSG(store.GetQuery{ID: "bench-get"}); err != nil {
 			b.Fatalf("Get failed: %v", err)
 		}
 	}

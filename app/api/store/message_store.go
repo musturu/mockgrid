@@ -55,11 +55,11 @@ type GetQuery struct {
 // MessageStore defines the interface for message persistence.
 type MessageStore interface {
 	// Save persists a message to the store.
-	Save(msg *Message) error
+	SaveMSG(msg *Message) error
 
 	// Get retrieves messages based on query parameters.
 	// If query.ID is set, returns a single message or ErrNotFound.
-	Get(query GetQuery) ([]*Message, error)
+	GetMSG(query GetQuery) ([]*Message, error)
 
 	// Close releases any resources held by the store.
 	Close() error

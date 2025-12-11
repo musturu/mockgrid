@@ -26,11 +26,11 @@ func RunStoreContractTests(t *testing.T, name string, factory StoreFactory) {
 			Timestamp: 1700000000,
 		}
 
-		if err := s.Save(msg); err != nil {
+		if err := s.SaveMSG(msg); err != nil {
 			t.Fatalf("Save failed: %v", err)
 		}
 
-		got, err := s.Get(store.GetQuery{ID: "test-123"})
+		got, err := s.GetMSG(store.GetQuery{ID: "test-123"})
 		if err != nil {
 			t.Fatalf("Get failed: %v", err)
 		}
@@ -52,7 +52,7 @@ func RunStoreContractTests(t *testing.T, name string, factory StoreFactory) {
 		s := factory(t)
 		defer s.Close()
 
-		got, err := s.Get(store.GetQuery{ID: "does-not-exist"})
+		got, err := s.GetMSG(store.GetQuery{ID: "does-not-exist"})
 		// Either returns empty slice with no error, or ErrNotFound
 		if err != nil && err != store.ErrNotFound {
 			t.Fatalf("unexpected error: %v", err)
@@ -73,18 +73,18 @@ func RunStoreContractTests(t *testing.T, name string, factory StoreFactory) {
 			Status:    store.StatusProcessed,
 			Timestamp: 1700000000,
 		}
-		if err := s.Save(msg); err != nil {
+		if err := s.SaveMSG(msg); err != nil {
 			t.Fatalf("first Save failed: %v", err)
 		}
 
 		// Update status
 		msg.Status = store.StatusDelivered
 		msg.LastEventTime = 1700000001
-		if err := s.Save(msg); err != nil {
+		if err := s.SaveMSG(msg); err != nil {
 			t.Fatalf("upsert Save failed: %v", err)
 		}
 
-		got, err := s.Get(store.GetQuery{ID: "upsert-1"})
+		got, err := s.GetMSG(store.GetQuery{ID: "upsert-1"})
 		if err != nil {
 			t.Fatalf("Get failed: %v", err)
 		}
@@ -107,12 +107,12 @@ func RunStoreContractTests(t *testing.T, name string, factory StoreFactory) {
 			{MsgID: "msg-3", FromEmail: "a@b.com", ToEmail: "c@d.com", Status: store.StatusDelivered, Timestamp: 3},
 		}
 		for _, m := range msgs {
-			if err := s.Save(m); err != nil {
+			if err := s.SaveMSG(m); err != nil {
 				t.Fatalf("Save failed: %v", err)
 			}
 		}
 
-		got, err := s.Get(store.GetQuery{Status: store.StatusDelivered})
+		got, err := s.GetMSG(store.GetQuery{Status: store.StatusDelivered})
 		if err != nil {
 			t.Fatalf("Get failed: %v", err)
 		}
@@ -139,12 +139,12 @@ func RunStoreContractTests(t *testing.T, name string, factory StoreFactory) {
 				Status:    store.StatusProcessed,
 				Timestamp: int64(i),
 			}
-			if err := s.Save(msg); err != nil {
+			if err := s.SaveMSG(msg); err != nil {
 				t.Fatalf("Save failed: %v", err)
 			}
 		}
 
-		got, err := s.Get(store.GetQuery{Limit: 3})
+		got, err := s.GetMSG(store.GetQuery{Limit: 3})
 		if err != nil {
 			t.Fatalf("Get failed: %v", err)
 		}
@@ -166,12 +166,12 @@ func RunStoreContractTests(t *testing.T, name string, factory StoreFactory) {
 				Status:    store.StatusProcessed,
 				Timestamp: int64(i),
 			}
-			if err := s.Save(msg); err != nil {
+			if err := s.SaveMSG(msg); err != nil {
 				t.Fatalf("Save failed: %v", err)
 			}
 		}
 
-		got, err := s.Get(store.GetQuery{})
+		got, err := s.GetMSG(store.GetQuery{})
 		if err != nil {
 			t.Fatalf("Get failed: %v", err)
 		}
@@ -211,11 +211,11 @@ func RunStoreContractTests(t *testing.T, name string, factory StoreFactory) {
 			ClicksCount:   2,
 		}
 
-		if err := s.Save(msg); err != nil {
+		if err := s.SaveMSG(msg); err != nil {
 			t.Fatalf("Save failed: %v", err)
 		}
 
-		got, err := s.Get(store.GetQuery{ID: "full-msg"})
+		got, err := s.GetMSG(store.GetQuery{ID: "full-msg"})
 		if err != nil {
 			t.Fatalf("Get failed: %v", err)
 		}

@@ -3,6 +3,7 @@ package sqlite
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -11,33 +12,30 @@ import (
 
 // Store persists messages in a SQLite database.
 type Store struct {
-	db *sql.DB
+	path string
+	db   *sql.DB
 }
 
-// New creates a new SQLite store at the given path.
-func New(dbPath string) (s *Store, err error) {
-	db, err := sql.Open("sqlite3", dbPath)
+func New(path string) (*Store, error) {
+	db, err := sql.Open("sqlite3", path)
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
 
-	s = &Store{db: db}
-	// Ensure db.Close() is deferred in case of an error
-	defer func() {
-		if err != nil {
-			err = db.Close()
-		}
-	}()
+	return &Store{path: path, db: db}, nil
+}
+
+// Connect creates a new SQLite store at the given path.
+func (s *Store) Connect() error {
 
 	if err := s.migrate(); err != nil {
-		return nil, fmt.Errorf("migrate database: %w", err)
+		return fmt.Errorf("migrate database: %w", err)
 	}
-	// err will be either be populated from db.close or be nil here
-	return s, err
+	return nil
 }
 
 // Save inserts or updates a message in the database.
-func (s *Store) Save(msg *store.Message) error {
+func (s *Store) SaveMSG(msg *store.Message) error {
 	if msg.MsgID == "" {
 		return fmt.Errorf("message ID is required")
 	}
@@ -71,11 +69,11 @@ clicks_count = excluded.clicks_count
 }
 
 // Get retrieves messages based on query parameters.
-func (s *Store) Get(query store.GetQuery) ([]*store.Message, error) {
+func (s *Store) GetMSG(query store.GetQuery) ([]*store.Message, error) {
 	if query.ID != "" {
-		return s.getByID(query.ID)
+		return s.getMSGByID(query.ID)
 	}
-	return s.list(query)
+	return s.listMSG(query)
 }
 
 // Close closes the database connection.
@@ -102,12 +100,106 @@ clicks_count INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_messages_status ON messages(status);
 CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
+CREATE TABLE IF NOT EXISTS webhooks (
+	id TEXT PRIMARY KEY,
+	url TEXT NOT NULL,
+	events TEXT NOT NULL,
+	enabled BOOLEAN NOT NULL DEFAULT 1,
+	secret TEXT,
+	created_at INTEGER,
+	updated_at INTEGER
+);
 `
 	_, err := s.db.Exec(query)
 	return err
 }
 
-func (s *Store) getByID(id string) ([]*store.Message, error) {
+// WebhookStore implementation
+func (s *Store) Create(hook *store.WebhookConfig) error {
+	eventsJSON, err := json.Marshal(hook.Events)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec(`INSERT INTO webhooks (id, url, events, enabled, secret, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		hook.ID, hook.URL, string(eventsJSON), hook.Enabled, hook.Secret, hook.CreatedAt, hook.UpdatedAt)
+	return err
+}
+
+func (s *Store) GetWebhook(id string) (*store.WebhookConfig, error) {
+	var cfg store.WebhookConfig
+	var eventsJSON string
+	err := s.db.QueryRow(`SELECT id, url, events, enabled, secret, created_at, updated_at FROM webhooks WHERE id = ?`, id).
+		Scan(&cfg.ID, &cfg.URL, &eventsJSON, &cfg.Enabled, &cfg.Secret, &cfg.CreatedAt, &cfg.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, store.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal([]byte(eventsJSON), &cfg.Events); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+func (s *Store) ListWebhooks() ([]*store.WebhookConfig, error) {
+	rows, err := s.db.Query(`SELECT id, url, events, enabled, secret, created_at, updated_at FROM webhooks ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var res []*store.WebhookConfig
+	for rows.Next() {
+		var cfg store.WebhookConfig
+		var eventsJSON string
+		if err := rows.Scan(&cfg.ID, &cfg.URL, &eventsJSON, &cfg.Enabled, &cfg.Secret, &cfg.CreatedAt, &cfg.UpdatedAt); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(eventsJSON), &cfg.Events); err != nil {
+			return nil, err
+		}
+		res = append(res, &cfg)
+	}
+	return res, nil
+}
+
+func (s *Store) ListEnabledWebhooks() ([]*store.WebhookConfig, error) {
+	rows, err := s.db.Query(`SELECT id, url, events, enabled, secret, created_at, updated_at FROM webhooks WHERE enabled = 1 ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var res []*store.WebhookConfig
+	for rows.Next() {
+		var cfg store.WebhookConfig
+		var eventsJSON string
+		if err := rows.Scan(&cfg.ID, &cfg.URL, &eventsJSON, &cfg.Enabled, &cfg.Secret, &cfg.CreatedAt, &cfg.UpdatedAt); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(eventsJSON), &cfg.Events); err != nil {
+			return nil, err
+		}
+		res = append(res, &cfg)
+	}
+	return res, nil
+}
+
+func (s *Store) UpdateWebhook(hook *store.WebhookConfig) error {
+	eventsJSON, err := json.Marshal(hook.Events)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec(`UPDATE webhooks SET url = ?, events = ?, enabled = ?, secret = ?, updated_at = ? WHERE id = ?`,
+		hook.URL, string(eventsJSON), hook.Enabled, hook.Secret, hook.UpdatedAt, hook.ID)
+	return err
+}
+
+func (s *Store) DeleteWebhook(id string) error {
+	_, err := s.db.Exec(`DELETE FROM webhooks WHERE id = ?`, id)
+	return err
+}
+
+func (s *Store) getMSGByID(id string) ([]*store.Message, error) {
 	query := `
 SELECT msg_id, from_email, to_email, subject, html_body, text_body,
        status, smtp_response, reason, timestamp, last_event_time,
@@ -127,7 +219,7 @@ FROM messages WHERE msg_id = ?
 	return []*store.Message{msg}, nil
 }
 
-func (s *Store) list(query store.GetQuery) ([]*store.Message, error) {
+func (s *Store) listMSG(query store.GetQuery) ([]*store.Message, error) {
 	limit := query.Limit
 	if limit == 0 {
 		limit = 100

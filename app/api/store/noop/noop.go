@@ -14,13 +14,13 @@ func New() *Store {
 	return &Store{}
 }
 
-// Save discards the message and returns nil.
-func (s *Store) Save(_ *store.Message) error {
+// SaveMSG discards the message and returns nil.
+func (s *Store) SaveMSG(_ *store.Message) error {
 	return nil
 }
 
-// Get always returns an empty slice.
-func (s *Store) Get(_ store.GetQuery) ([]*store.Message, error) {
+// GetMSG always returns an empty slice.
+func (s *Store) GetMSG(_ store.GetQuery) ([]*store.Message, error) {
 	return []*store.Message{}, nil
 }
 
@@ -28,3 +28,18 @@ func (s *Store) Get(_ store.GetQuery) ([]*store.Message, error) {
 func (s *Store) Close() error {
 	return nil
 }
+
+// Connect is a no-op.
+func (s *Store) Connect() error {
+	return nil
+}
+
+// Webhook store no-op implementations
+func (s *Store) Create(_ *store.WebhookConfig) error               { return nil }
+func (s *Store) GetWebhook(_ string) (*store.WebhookConfig, error) { return nil, store.ErrNotFound }
+func (s *Store) ListWebhooks() ([]*store.WebhookConfig, error)     { return []*store.WebhookConfig{}, nil }
+func (s *Store) ListEnabledWebhooks() ([]*store.WebhookConfig, error) {
+	return []*store.WebhookConfig{}, nil
+}
+func (s *Store) UpdateWebhook(_ *store.WebhookConfig) error { return store.ErrNotFound }
+func (s *Store) DeleteWebhook(_ string) error               { return store.ErrNotFound }

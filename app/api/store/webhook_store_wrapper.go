@@ -2,6 +2,8 @@
 package store
 
 import (
+	"errors"
+	"fmt"
 	"log/slog"
 )
 
@@ -21,13 +23,16 @@ func NewStoreWrapper(baseStore MessageStore, dispatcher EventDispatcher) *StoreW
 }
 
 // Save persists a message and dispatches webhook if status changed
-func (w *StoreWrapper) Save(msg *Message) error {
+func (w *StoreWrapper) SaveMSG(msg *Message) error {
 	// Check if this is an update (message already exists)
-	oldMsgs, _ := w.wrapped.Get(GetQuery{ID: msg.MsgID})
+	oldMsgs, err := w.wrapped.GetMSG(GetQuery{ID: msg.MsgID})
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return fmt.Errorf("fetch existing message: %w", err)
+	}
 	wasNew := len(oldMsgs) == 0
 
 	// Save to underlying store
-	if err := w.wrapped.Save(msg); err != nil {
+	if err := w.wrapped.SaveMSG(msg); err != nil {
 		return err
 	}
 
@@ -47,9 +52,9 @@ func (w *StoreWrapper) Save(msg *Message) error {
 	return nil
 }
 
-// Get delegates to wrapped store
-func (w *StoreWrapper) Get(query GetQuery) ([]*Message, error) {
-	return w.wrapped.Get(query)
+// GetMSG delegates to wrapped store
+func (w *StoreWrapper) GetMSG(query GetQuery) ([]*Message, error) {
+	return w.wrapped.GetMSG(query)
 }
 
 // Close delegates to wrapped store

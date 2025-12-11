@@ -306,7 +306,7 @@ func (s *Service) saveMessages(pr *objects.PostRequest, p objects.Personalizatio
 			LastEventTime: now,
 		}
 
-		if err := s.store.Save(msg); err != nil {
+		if err := s.store.SaveMSG(msg); err != nil {
 			slog.Error("failed to save message", "err", err, "msg_id", msgID)
 		}
 	}

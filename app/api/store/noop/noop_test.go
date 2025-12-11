@@ -15,7 +15,7 @@ func TestNoop_Save_ReturnsNil(t *testing.T) {
 	defer s.Close()
 
 	msg := &store.Message{MsgID: "test", FromEmail: "a@b.com"}
-	if err := s.Save(msg); err != nil {
+	if err := s.SaveMSG(msg); err != nil {
 		t.Errorf("expected nil error, got: %v", err)
 	}
 }
@@ -25,10 +25,10 @@ func TestNoop_Get_ReturnsEmpty(t *testing.T) {
 	defer s.Close()
 
 	// Save something
-	s.Save(&store.Message{MsgID: "test"})
+	s.SaveMSG(&store.Message{MsgID: "test"})
 
 	// Get returns empty (noop doesn't store)
-	got, err := s.Get(store.GetQuery{ID: "test"})
+	got, err := s.GetMSG(store.GetQuery{ID: "test"})
 	if err != nil {
 		t.Errorf("expected nil error, got: %v", err)
 	}
@@ -41,7 +41,7 @@ func TestNoop_Get_WithStatus_ReturnsEmpty(t *testing.T) {
 	s := noop.New()
 	defer s.Close()
 
-	got, err := s.Get(store.GetQuery{Status: store.StatusDelivered})
+	got, err := s.GetMSG(store.GetQuery{Status: store.StatusDelivered})
 	if err != nil {
 		t.Errorf("expected nil error, got: %v", err)
 	}
@@ -54,7 +54,7 @@ func TestNoop_Get_All_ReturnsEmpty(t *testing.T) {
 	s := noop.New()
 	defer s.Close()
 
-	got, err := s.Get(store.GetQuery{})
+	got, err := s.GetMSG(store.GetQuery{})
 	if err != nil {
 		t.Errorf("expected nil error, got: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestNoop_MultipleSaves_NoError(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		msg := &store.Message{MsgID: "msg-" + string(rune('a'+i%26))}
-		if err := s.Save(msg); err != nil {
+		if err := s.SaveMSG(msg); err != nil {
 			t.Fatalf("Save %d failed: %v", i, err)
 		}
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/mustur/mockgrid/app/api/store/noop"
 	"github.com/mustur/mockgrid/app/api/store/sqlite"
 	"github.com/mustur/mockgrid/app/api/svc/sendmail"
+	"github.com/mustur/mockgrid/app/api/svc/webhook"
 	"github.com/mustur/mockgrid/app/config"
 	"github.com/mustur/mockgrid/app/template"
 	"github.com/pterm/pterm"
@@ -31,20 +32,39 @@ var serveCmd = &cobra.Command{
 		pterm.Info.Println("Configuration values:")
 		cfg.PrintValues()
 
-		msgStore, err := buildStore(cfg)
+		st, err := buildStore(cfg)
 		if err != nil {
 			return fmt.Errorf("initialize store: %w", err)
 		}
 		defer func() {
-			if err := msgStore.Close(); err != nil {
+			if err := st.Close(); err != nil {
 				slog.Error("failed to close store", "err", err)
 			}
 		}()
+		err = st.Connect()
+		if err != nil {
+			return fmt.Errorf("connect store: %w", err)
+		}
 
 		tpl := buildTemplater(cfg)
 		listenAddr := fmt.Sprintf("%s:%d", cfg.MockgridHost, cfg.MockgridPort)
 
 		// Build services
+		// Assert that the initialized store implements MessageStore and WebhookStore
+		baseMsgStore, ok := st.(store.MessageStore)
+		if !ok {
+			return fmt.Errorf("initialized store does not implement store.MessageStore")
+		}
+		_, ok = st.(store.WebhookStore)
+		if !ok {
+			return fmt.Errorf("initialized store does not implement store.WebhookStore")
+		}
+		// Create webhook dispatcher backed by the same store
+		dispatcher := webhook.NewDispatcher(st)
+
+		// Wrap the message store with a wrapper that dispatches events
+		wrappedMsgStore := store.NewStoreWrapper(baseMsgStore, dispatcher)
+
 		mailSvc := sendmail.New(sendmail.Config{
 			SMTPServer:    cfg.SMTPServer,
 			SMTPPort:      cfg.SMTPPort,
@@ -53,10 +73,13 @@ var serveCmd = &cobra.Command{
 			AuthKey:       authKey(cfg),
 			SMTPUser:      smtpUser(cfg),
 			SMTPPass:      smtpPass(cfg),
-		}, tpl, msgStore)
+		}, tpl, wrappedMsgStore)
+
+		// Build webhook service using the backend store and dispatcher
+		webhookSvc := webhook.NewService(st, dispatcher)
 
 		// Create and start the server
-		mg := api.New(listenAddr, mailSvc)
+		mg := api.New(listenAddr, mailSvc, webhookSvc)
 
 		slog.Info("starting mockgrid server", "address", listenAddr)
 		cmd.SetContext(context.Background())
@@ -79,8 +102,8 @@ func buildTemplater(cfg *config.Config) template.Templater {
 	}
 }
 
-// buildStore creates the appropriate message store based on config.
-func buildStore(cfg *config.Config) (store.MessageStore, error) {
+// buildStore creates the appropriate backend store (messages + webhooks) based on config.
+func buildStore(cfg *config.Config) (store.BackendStore, error) {
 	if cfg.Storage == nil {
 		return noop.New(), nil
 	}

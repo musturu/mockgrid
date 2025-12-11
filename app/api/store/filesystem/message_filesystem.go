@@ -13,7 +13,7 @@ import (
 )
 
 // Save writes a message to a JSON file named by its ID.
-func (s *Store) Save(msg *store.Message) error {
+func (s *Store) SaveMSG(msg *store.Message) error {
 	if msg.MsgID == "" {
 		return fmt.Errorf("message ID is required")
 	}
@@ -32,17 +32,18 @@ func (s *Store) Save(msg *store.Message) error {
 }
 
 // Get retrieves messages based on query parameters.
-func (s *Store) Get(query store.GetQuery) ([]*store.Message, error) {
+func (s *Store) GetMSG(query store.GetQuery) ([]*store.Message, error) {
 	if query.ID != "" {
-		return s.getByID(query.ID)
+		return s.getMSGByID(query.ID)
 	}
-	return s.list(query)
+	return s.listMSG(query)
 }
 
-func (s *Store) getByID(id string) ([]*store.Message, error) {
+func (s *Store) getMSGByID(id string) ([]*store.Message, error) {
 	// Use fs.ReadFile from io/fs package
 	filename := s.filename(id)
-	data, err := fs.ReadFile(os.DirFS(s.dir), filename)
+	fsys := os.DirFS(s.dir)
+	data, err := fs.ReadFile(fsys, filepath.Base(filename))
 	if os.IsNotExist(err) {
 		return nil, store.ErrNotFound
 	}
@@ -58,7 +59,7 @@ func (s *Store) getByID(id string) ([]*store.Message, error) {
 	return []*store.Message{&msg}, nil
 }
 
-func (s *Store) list(query store.GetQuery) ([]*store.Message, error) {
+func (s *Store) listMSG(query store.GetQuery) ([]*store.Message, error) {
 	entries, err := os.ReadDir(s.dir)
 	if err != nil {
 		return nil, fmt.Errorf("read store directory: %w", err)

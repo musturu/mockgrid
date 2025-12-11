@@ -176,7 +176,7 @@ func NewMockMessageStore() *MockMessageStore {
 }
 
 // Save stores a message in memory.
-func (m *MockMessageStore) Save(msg *store.Message) error {
+func (m *MockMessageStore) SaveMSG(msg *store.Message) error {
 	if m.SaveErr != nil {
 		return m.SaveErr
 	}
@@ -188,7 +188,7 @@ func (m *MockMessageStore) Save(msg *store.Message) error {
 }
 
 // Get retrieves messages matching the query.
-func (m *MockMessageStore) Get(q store.GetQuery) ([]*store.Message, error) {
+func (m *MockMessageStore) GetMSG(q store.GetQuery) ([]*store.Message, error) {
 	if m.GetErr != nil {
 		return nil, m.GetErr
 	}

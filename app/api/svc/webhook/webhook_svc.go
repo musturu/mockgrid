@@ -2,12 +2,14 @@
 package webhook
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/mustur/mockgrid/app/api/store"
 )
@@ -54,7 +56,7 @@ type ListResponse struct {
 
 // HandleListWebhooks handles GET /webhooks
 func (s *Service) HandleListWebhooks(w http.ResponseWriter, r *http.Request) {
-	hooks, err := s.store.List()
+	hooks, err := s.store.ListWebhooks()
 	if err != nil {
 		slog.Error("failed to list webhooks", "err", err)
 		http.Error(w, `{"error":"failed to list webhooks"}`, http.StatusInternalServerError)
@@ -74,7 +76,7 @@ func (s *Service) HandleListWebhooks(w http.ResponseWriter, r *http.Request) {
 func (s *Service) HandleGetWebhook(w http.ResponseWriter, r *http.Request) {
 	id := extractID(r.URL.Path) // may be empty for list
 
-	hook, err := s.store.Get(id)
+	hook, err := s.store.GetWebhook(id)
 	if err != nil {
 		slog.Error("failed to get webhook(s)", "id", id, "err", err)
 		http.Error(w, `{"error":"failed to get webhook(s)"}`, http.StatusInternalServerError)
@@ -140,7 +142,7 @@ func (s *Service) HandleUpdateWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hook, err := s.store.Get(id)
+	hook, err := s.store.GetWebhook(id)
 	if err != nil || hook == nil {
 		http.Error(w, `{"error":"webhook not found"}`, http.StatusNotFound)
 		return
@@ -157,7 +159,7 @@ func (s *Service) HandleUpdateWebhook(w http.ResponseWriter, r *http.Request) {
 		hook.Secret = req.Secret
 	}
 
-	if err := s.store.Update(hook); err != nil {
+	if err := s.store.UpdateWebhook(hook); err != nil {
 		slog.Error("failed to update webhook", "id", id, "err", err)
 		http.Error(w, `{"error":"failed to update webhook"}`, http.StatusInternalServerError)
 		return
@@ -180,7 +182,7 @@ func (s *Service) HandleDeleteWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.store.Delete(id); err != nil {
+	if err := s.store.DeleteWebhook(id); err != nil {
 		slog.Error("failed to delete webhook", "id", id, "err", err)
 		if errors.Is(err, ErrNotFound) {
 			http.Error(w, `{"error":"webhook not found"}`, http.StatusNotFound)
@@ -206,14 +208,14 @@ func (s *Service) HandleToggleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hook, err := s.store.Get(id)
+	hook, err := s.store.GetWebhook(id)
 	if err != nil || hook == nil {
 		http.Error(w, `{"error":"webhook not found"}`, http.StatusNotFound)
 		return
 	}
 
 	hook.Enabled = !hook.Enabled
-	if err := s.store.Update(hook); err != nil {
+	if err := s.store.UpdateWebhook(hook); err != nil {
 		slog.Error("failed to toggle webhook", "id", id, "err", err)
 		http.Error(w, `{"error":"failed to toggle webhook"}`, http.StatusInternalServerError)
 		return
@@ -237,6 +239,9 @@ func webhookToResponse(hook *store.WebhookConfig) *WebhookResponse {
 func extractID(path string) string {
 	// Parse /webhooks/{id} or /webhooks/{id}/toggle
 	parts := strings.Split(strings.TrimSuffix(path, "/"), "/")
+	if len(parts) >= 1 && parts[len(parts)-1] == "toggle" {
+		parts = parts[:len(parts)-1]
+	}
 	if len(parts) >= 2 {
 		return parts[len(parts)-1]
 	}
@@ -244,6 +249,9 @@ func extractID(path string) string {
 }
 
 func generateID() string {
-	// Simple ID generation (in production, use uuid)
-	return fmt.Sprintf("wh_%d", int64(len([]byte{})))
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		return fmt.Sprintf("wh_%d", time.Now().UnixNano())
+	}
+	return fmt.Sprintf("wh_%d_%x", time.Now().UnixNano(), b)
 }
