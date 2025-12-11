@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,7 +20,7 @@ func (s *Store) webhookFile(id string) string {
 }
 
 func (s *Store) ensureWebhookDir() error {
-	return os.MkdirAll(filepath.Join(s.dir, "webhooks"), 0o755)
+	return os.MkdirAll(filepath.Join(s.dir, "webhooks"), 0o750)
 }
 
 // Create saves a webhook definition to disk.
@@ -52,10 +53,11 @@ func (s *Store) Create(hook *store.WebhookConfig) error {
 
 // GetWebhook reads a webhook by id.
 func (s *Store) GetWebhook(id string) (*store.WebhookConfig, error) {
-	file := s.webhookFile(id)
-	data, err := os.ReadFile(file)
+	file := filepath.Base(id)
+	fsys := os.DirFS(filepath.Join(s.dir, "webhooks"))
+	data, err := fs.ReadFile(fsys, file+".json")
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return nil, store.ErrNotFound
 		}
 		return nil, err
@@ -77,12 +79,13 @@ func (s *Store) ListWebhooks() ([]*store.WebhookConfig, error) {
 		}
 		return nil, err
 	}
+	fsys := os.DirFS(dir)
 	var res []*store.WebhookConfig
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+		data, err := fs.ReadFile(fsys, entry.Name())
 		if err != nil {
 			continue
 		}

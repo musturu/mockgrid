@@ -68,8 +68,7 @@ func (s *Service) HandleListWebhooks(w http.ResponseWriter, r *http.Request) {
 		resp.Result = append(resp.Result, webhookToResponse(hook))
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	writeJSONResponse(w, http.StatusOK, resp)
 }
 
 // HandleGetWebhooks handles GET /webhooks/{id}
@@ -83,8 +82,7 @@ func (s *Service) HandleGetWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(webhookToResponse(hook))
+	writeJSONResponse(w, http.StatusOK, webhookToResponse(hook))
 }
 
 // HandleCreateWebhook handles POST /webhooks
@@ -120,11 +118,9 @@ func (s *Service) HandleCreateWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
 	resp := webhookToResponse(config)
 	resp.Secret = req.Secret // Include secret in creation response
-	json.NewEncoder(w).Encode(resp)
+	writeJSONResponse(w, http.StatusCreated, resp)
 }
 
 // HandleUpdateWebhook handles PUT /webhooks/{id}
@@ -165,8 +161,7 @@ func (s *Service) HandleUpdateWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(webhookToResponse(hook))
+	writeJSONResponse(w, http.StatusOK, webhookToResponse(hook))
 }
 
 // HandleDeleteWebhook handles DELETE /webhooks/{id}
@@ -221,8 +216,7 @@ func (s *Service) HandleToggleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(webhookToResponse(hook))
+	writeJSONResponse(w, http.StatusOK, webhookToResponse(hook))
 }
 
 // Helper functions
@@ -254,4 +248,12 @@ func generateID() string {
 		return fmt.Sprintf("wh_%d", time.Now().UnixNano())
 	}
 	return fmt.Sprintf("wh_%d_%x", time.Now().UnixNano(), b)
+}
+
+func writeJSONResponse(w http.ResponseWriter, status int, payload interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		slog.Error("failed to encode response", "err", err)
+	}
 }
