@@ -26,4 +26,4 @@ auth:
 
 storage:
   type: "filesystem"                    # Storage type: "none", "sqlite", "filesystem"
-  path: "./data/messages.db"      # Path for sqlite db or filesystem directory
+  path: "./data"      # Path for sqlite db or filesystem directory

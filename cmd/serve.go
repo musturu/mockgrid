@@ -32,6 +32,7 @@ var serveCmd = &cobra.Command{
 		pterm.Info.Println("Configuration values:")
 		cfg.PrintValues()
 
+		// Build backend store
 		st, err := buildStore(cfg)
 		if err != nil {
 			return fmt.Errorf("initialize store: %w", err)
@@ -49,21 +50,11 @@ var serveCmd = &cobra.Command{
 		tpl := buildTemplater(cfg)
 		listenAddr := fmt.Sprintf("%s:%d", cfg.MockgridHost, cfg.MockgridPort)
 
-		// Build services
-		// Assert that the initialized store implements MessageStore and WebhookStore
-		baseMsgStore, ok := st.(store.MessageStore)
-		if !ok {
-			return fmt.Errorf("initialized store does not implement store.MessageStore")
-		}
-		_, ok = st.(store.WebhookStore)
-		if !ok {
-			return fmt.Errorf("initialized store does not implement store.WebhookStore")
-		}
 		// Create webhook dispatcher backed by the same store
 		dispatcher := webhook.NewDispatcher(st)
 
 		// Wrap the message store with a wrapper that dispatches events
-		wrappedMsgStore := store.NewStoreWrapper(baseMsgStore, dispatcher)
+		wrappedMsgStore := store.NewStoreWrapper(st, dispatcher)
 
 		mailSvc := sendmail.New(sendmail.Config{
 			SMTPServer:    cfg.SMTPServer,
